@@ -45,17 +45,20 @@ static void append_to_string(char *message, char symbol) {
 
 static void space_key(uint gpio, uint32_t eventMask) {
     // key to add space
-    append_to_string(current_message, ' ');
+    printf(" ");
+    //append_to_string(current_message, ' ');
 }
 
 float ax = 0.0, ay = 0.0, az = 0.0, gx = 0.0, gy = 0.0, gz = 0.0, t = 0.0;
 static float last_printed_gx = 0.0f;
-static int first_gx = 1;
+static int first_gx = 0;
 
 int main() {
     stdio_init_all();
     init_hat_sdk();
     sleep_ms(300);
+    init_button2();
+    gpio_set_irq_enabled_with_callback(BUTTON2, GPIO_IRQ_EDGE_RISE, true, space_key);
 
     // Set up sensor
     if (init_ICM42670() != 0) {
@@ -78,7 +81,7 @@ int main() {
         // print gx only when it changes significantly
 
 
-        const float threshold = 50.0f;
+        const float threshold = 30.0f;
 
         if (!(gx >= 230.0f || gx <= -230.0f)) {
            gx = 0;
@@ -88,18 +91,16 @@ int main() {
         if (diff < 0.0f) diff = -diff;
         if (first_gx || diff >= threshold) {
             if(gx >= 230.0f) {
-                printf("DOWN\n");
+                printf("."); //down
                 //append_to_string(current_message, '.');
             } else if (gx <= -230.0f) {
-                printf("UP\n");
+                printf("-"); //up
                 //append_to_string(current_message, '-');
             }
             last_printed_gx = gx;
             first_gx = 0;
         }
         
-
-
         sleep_ms(100);
     }
         sleep_ms(100);
