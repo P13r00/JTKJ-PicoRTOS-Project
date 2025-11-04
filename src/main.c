@@ -10,7 +10,7 @@
 #include "tkjhat/sdk.h"
 
 #define DEFAULT_STACK_SIZE 2048
-// #define CDC_ITF_TX      1 what does it do?
+#define THRESHOLD      100
 
 enum state { WAITING=0, SYMBOL_DETECTION=1, DATA_READY=2};
 enum state programState = WAITING;
@@ -74,27 +74,25 @@ int main() {
     for (;;) {
         if (ICM42670_read_sensor_data(&ax, &ay, &az, &gx, &gy, &gz, &t) != 0) {
             printf("Sensor read failed:");
-            sleep_ms(500);
+            sleep_ms(200);
             continue;
         }
 
         // print gx only when it changes significantly
 
 
-        const float threshold = 30.0f;
-
-        if (!(gx >= 230.0f || gx <= -230.0f)) {
+        if (!(gx >= THRESHOLD || gx <= -THRESHOLD)) {
            gx = 0;
         }
 
         float diff = gx - last_printed_gx;
         if (diff < 0.0f) diff = -diff;
-        if (first_gx || diff >= threshold) {
-            if(gx >= 230.0f) {
-                printf("."); //down
+        if (first_gx || diff >= 20.0f) {
+            if(gx >= THRESHOLD) {
+                printf("DOWN"); //down
                 //append_to_string(current_message, '.');
-            } else if (gx <= -230.0f) {
-                printf("-"); //up
+            } else if (gx <= -THRESHOLD) {
+                printf("UP"); //up
                 //append_to_string(current_message, '-');
             }
             last_printed_gx = gx;
@@ -103,7 +101,8 @@ int main() {
         
         sleep_ms(100);
     }
-        sleep_ms(100);
+
+    sleep_ms(100);
     }
     return 0;
 }
