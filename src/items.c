@@ -1,12 +1,9 @@
 #include <stdio.h>
 #include <string.h>
-
 #include <pico/stdlib.h>
-
 #include <FreeRTOS.h>
 #include <queue.h>
 #include <task.h>
-
 #include "tkjhat/sdk.h"
 
 #define DEFAULT_STACK_SIZE 2048
@@ -27,9 +24,12 @@ enum state programState = WAITING;
 
 //global variables
 char current_message[256] = {0}; //current message
-uint8t space_counter = 0;        //counter of consecutive spaces
-bool receiving1_sending0 = 0     //reciving a message from workstation or sending a message
+uint8_t space_counter = 0;        //counter of consecutive spaces
+bool receiving1_sending0 = 0;     //reciving a message from workstation or sending a message
 //bool communicating = 0           //communicating with another Pico Project
+float ax = 0.0, ay = 0.0, az = 0.0, gx = 0.0, gy = 0.0, gz = 0.0, t = 0.0;
+static float last_printed_gx = 0.0f;
+static int first_gx = 0;
 
 /*
 main loop
@@ -64,6 +64,14 @@ while True:
     WAITING
 */
 
+static void toggle_symbol_detection(uint gpio, uint32_t eventMask);
+static void append_to_string(char *message, char symbol);
+static void space_key(uint gpio, uint32_t eventMask);
+static void starting_initializer();
+static void symbolDetectionTask(void *pvParameters);
+static void displayingTask(void *pvParameters);
+static void msgToWorkstationTask(void *pvParameters);
+
 static void toggle_symbol_detection(uint gpio, uint32_t eventMask) {
     //Change State
     programState = SYMBOL_DETECTION;
@@ -84,7 +92,7 @@ static void space_key(uint gpio, uint32_t eventMask) {
 static void starting_initializer(){
     stdio_init_all();
     init_hat_sdk();
-    sleep_ms(300);
+    sleep_ms(5000);
     init_button1();
     init_button2();
     gpio_set_irq_enabled_with_callback(BUTTON1, GPIO_IRQ_EDGE_RISE, true, toggle_symbol_detection);
@@ -147,7 +155,7 @@ int main(){
         DEFAULT_STACK_SIZE,
         NULL,
         2,
-        &hSensorTask);
+        &hsymbolDetectionTask);
         if(result != pdPASS) {
             printf("Symbol Detection task creation failed\n");
             return 0;
@@ -165,7 +173,7 @@ int main(){
         }
 
         result = xTaskCreate(msgToWorkstationTask,  //could be optional and included in the decoding function
-                    "Displaying", 
+                    "Sending to workstation", 
                     DEFAULT_STACK_SIZE,
                     NULL,
                     2,
@@ -179,10 +187,6 @@ int main(){
 
     vTaskStartScheduler();
 
-    return 0
+    return 0;
 
 }
-
-
-
-

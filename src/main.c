@@ -56,8 +56,9 @@ static int first_gx = 0;
 int main() {
     stdio_init_all();
     init_hat_sdk();
-    sleep_ms(300);
+    sleep_ms(5000);
     init_button2();
+    ICM42670_start_with_default_values();
     gpio_set_irq_enabled_with_callback(BUTTON2, GPIO_IRQ_EDGE_RISE, true, space_key);
 
     // Set up sensor
@@ -74,9 +75,11 @@ int main() {
     for (;;) {
         if (ICM42670_read_sensor_data(&ax, &ay, &az, &gx, &gy, &gz, &t) != 0) {
             printf("Sensor read failed:");
-            sleep_ms(200);
+            sleep_ms(5000);
             continue;
         }
+        printf("ax: %.2f ay: %.2f az: %.2f | gx: %.2f gy: %.2f gz: %.2f | t: %.2f\n",
+               ax, ay, az, gx, gy, gz, t);
 
         // print gx only when it changes significantly
 
