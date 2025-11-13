@@ -7,67 +7,60 @@
 #include "tkjhat/sdk.h"
 
 #define DEFAULT_STACK_SIZE 2048
-#define THRESHOLD          100
+#define THRESHOLD          100 //for sensor data filtering
+#define INPUT_BUFFER_SIZE 100 //-piero: added as a global variable
 
-//states
+//states -piero: update incrementally following new functionalities
 enum state { WAITING=0,             //await input from sensor or workstation
              SYMBOL_DETECTION=1,    //read symbols from sensor
-             //DATA_READY=2,          //string successfully created
+             MSG_FROM_WORKSTATION=2,  //??notneeded?? sending the message to the workstation
+             DISPLAYING=3,          //displaying the message, providing audio feedback
              //DECODING=3,            //from Morse -> Characters
              //ENCODING=4,            //from Characters -> Morse
-             DISPLAYING=3,          //displaying the message, providing audio feedback
-             MSG_FROM_WORKSTATION=2  //??notneeded?? sending the message to the workstation
-             //MSG_TO_FRIEND=7,       //sending a message to another project
-             //MSG_FROM_FRIEND=8      //receiving a message from another project
             };
 enum state programState = WAITING;
 
 //global variables
-char current_message[256] = {0}; //current message
-uint8_t space_counter = 0;        //counter of consecutive spaces
-bool receiving1_sending0 = 0;     //reciving a message from workstation or sending a message
-//bool communicating = 0           //communicating with another Pico Project
+char current_message[INPUT_BUFFER_SIZE] = {0}; //current message -piero: decreased size
 float ax = 0.0, ay = 0.0, az = 0.0, gx = 0.0, gy = 0.0, gz = 0.0, t = 0.0;
 static float last_printed_gx = 0.0f;
 static int first_gx = 0;
 
-static void button_function(uint gpio, uint32_t eventMask);
+static void button_function(uint gpio, uint32_t eventMask); //-piero: REMEMBBER TO ADD ALL PROTOTYPES
 static void append_to_string(char *message, char symbol);
 static void space_key(uint gpio, uint32_t eventMask);
 static void symbolDetectionTask(void *pvParameters);
 static void displayingTask(void *pvParameters);
 static void msgToWorkstationTask(void *pvParameters);
+static void super_init();
 static void state_change();
+static void reset_screen();
 
-static void button_function(uint gpio, uint32_t eventMask) {
+/*static void reset_screen(){
+    memset(current_message, 0, INPUT_BUFFER_SIZE); //clear the message buffer
+    //reset other variables
+    i2c_deinit(i2c_default);
+}*/
+
+
+static void button_function(uint gpio, uint32_t eventMask) { //-piero: removed change state function, everything is working directly
     if (gpio == BUTTON1) {
         if(programState == WAITING){
             programState = SYMBOL_DETECTION;
-            printf("Current State: %d\n", programState);
+            printf("Current State: SYMBOL_DETECTION\n");
         } else {
-            state_change();
+            programState = DISPLAYING;
+            printf("Current State: DISPLAYING\n");
         }
     } else if (gpio == BUTTON2) {
         if(programState == WAITING){
-            printf("Changing state to MSG_FROM_WORKSTATION\n");
             programState = MSG_FROM_WORKSTATION;
-            printf("Current State: %d\n", programState);
+            printf("Current State: MSG_FROM_WORKSTATION\n");
         } else {
-            state_change();
+            programState = DISPLAYING;
+            printf("Current State: DISPLAYING\n");
         }
     }
-}
-
-static void state_change(){
-    if(programState == SYMBOL_DETECTION||programState == MSG_FROM_WORKSTATION){
-        programState = DISPLAYING;
-        printf("Changing state to DISPLAYING\n");
-    } else if(programState == DISPLAYING){
-        current_message[0] = '\0';
-        programState = WAITING;
-        printf("Changing state to WAITING\n");
-    }
-    //printf("Current State: %d\n", programState);
 }
 
 static void append_to_string(char *message, char symbol) {
@@ -77,13 +70,10 @@ static void append_to_string(char *message, char symbol) {
     *message = '\0';
 }
 
-static void space_key(uint gpio, uint32_t eventMask) {
-    append_to_string(current_message, ' ');
-}
-
-static void symbolDetectionTask(void *pvParameters) {
+static void symbolDetectionTask(void *pvParameters) { //-piero: ples keep indentation tidy
     while(1){
         if(programState == SYMBOL_DETECTION){
+            memset(current_message, 0, INPUT_BUFFER_SIZE); //clear the message buffer
             for (;;) {
                 if (ICM42670_read_sensor_data(&ax, &ay, &az, &gx, &gy, &gz, &t) != 0) {
                     printf("Sensor read failed:");
@@ -91,7 +81,7 @@ static void symbolDetectionTask(void *pvParameters) {
                     continue;
                 }
                 if (!(gx >= THRESHOLD || gx <= -THRESHOLD)) {
-                gx = 0;
+                    gx = 0;
                 }
                 float diff = gx - last_printed_gx;
                 if (diff < 0.0f) diff = -diff;
@@ -103,56 +93,80 @@ static void symbolDetectionTask(void *pvParameters) {
                     }
                     last_printed_gx = gx;
                     first_gx = 0;
-            }
-            sleep_ms(100);
+                }
+                sleep_ms(100);
             }
         }
     }
 }
 
-static void displayingTask(void *pvParameters) {
-    /*(void)pvParameters;
-
-    init_display();
-    printf("Initializing display\n");
-    static int counter = 0; 
-
-    while(1) {
-        clear_display();
-        char buf[5]; //Store a number of maximum 5 figures 
-        sprintf(buf,"%d",counter++);
-        write_text(buf);
-        vTaskDelay(pdMS_TO_TICKS(4000));
-    }*/
-   while(1){}
-
-}
-
-static void msgToWorkstationTask(void *pvParameters) {
+static void displayTask(void *pvParameters) { //unified displaytask with msg to workstation
     while(1){
+        //printf("1\n");
         if(programState == DISPLAYING){
+            printf("d1\n");
+            super_init();
+            printf("d2\n");
+            init_display();
+            printf("d3\n");
             printf("Message: %s\n", current_message);
-            state_change(&programState);
+
+            memset(current_message, 0, INPUT_BUFFER_SIZE); //clear the message buffer
             vTaskDelay(pdMS_TO_TICKS(100));
+            write_text_xy(0, 0, current_message);
+            sleep_ms(2000); //Display for 2 seconds
+            programState = WAITING;
+            printf("Current State: WAITING\n");
         }
     }
 }
 
-static void msgFromWorkstationTask(void *pvParameters) {
-    while(1){
+static void msgFromWorkstationTask(void *pvParameters) { //-piero: implemented from code in examples, allocated right stack size, TODO: more error Handling
+    (void)pvParameters;
+    memset(current_message, 0, INPUT_BUFFER_SIZE); //clear the message buffer
+    size_t index = 0;
+
+    while (1){
         if(programState == MSG_FROM_WORKSTATION){
-            printf("Write your message to send to the Pico: ");
-            /* wait until a non-empty message has been received */
-            current_message[0] = '\0';
-            while (current_message[0] == '\0') {
-                if (scanf("%255s", current_message) == 1){ // implement i2c_read 
-                    break;
-                };
-                vTaskDelay(pdMS_TO_TICKS(100));
+            // take one char per time and store it in line array, until reeceived the \n
+            // The application should instead play a sound, or blink a LED. 
+            int c = getchar_timeout_us(0);
+            if (c != PICO_ERROR_TIMEOUT){// I have received a character
+                if (c == '\r') continue; // ignore CR, wait for LF if (ch == '\n') { line[len] = '\0';
+                if (c == '\n'){
+                    // terminate and process the collected line
+                    current_message[index] = '\0'; 
+                    //printf("__[RX]:\"%s\"__\n", current_message); //Print as debug in the output
+                    index = 0;
+                    programState = DISPLAYING;
+                    printf("Current State: DISPLAYING\n");
+                    vTaskDelay(pdMS_TO_TICKS(100)); // Wait for new message
+                }
+                else if(index < INPUT_BUFFER_SIZE - 1){
+                    current_message[index++] = (char)c;
+                }
+                else { //Overflow: print and restart the buffer with the new character. 
+                    current_message[INPUT_BUFFER_SIZE - 1] = '\0';
+                    //printf("__[RX]:\"%s\"__\n", current_message);
+                    index = 0; 
+                    current_message[index++] = (char)c;
+                }
             }
-            state_change(&programState);
+            else {
+                vTaskDelay(pdMS_TO_TICKS(100)); // Wait for new message
+            }
         }
     }
+}
+
+static void super_init() {
+    i2c_deinit(i2c_default);
+    gpio_set_function(DEFAULT_I2C_SDA_PIN, GPIO_FUNC_SIO);
+    gpio_set_function(DEFAULT_I2C_SCL_PIN, GPIO_FUNC_SIO);
+    gpio_set_dir(DEFAULT_I2C_SDA_PIN, GPIO_IN);
+    gpio_set_dir(DEFAULT_I2C_SCL_PIN, GPIO_IN);
+    sleep_ms(100);
+    init_i2c_default();
 }
 
 int main(){
@@ -163,13 +177,19 @@ int main(){
     init_sw2();
     gpio_set_irq_enabled_with_callback(BUTTON1, GPIO_IRQ_EDGE_RISE, true, button_function);
     gpio_set_irq_enabled(BUTTON2, GPIO_IRQ_EDGE_RISE, true);
-
+    
     init_ICM42670();
     ICM42670_start_with_default_values();
-    printf("Init successful\n");   
     sleep_ms(100);
-    printf("Start by pressing Button1 (right button)\n");
-    TaskHandle_t hsymbolDetectionTask, hdisplayingTask, hmsgToWorkstationTask, hmsgFromWorkstationTask = NULL;
+
+    //if (super_init() != 0) {
+        //printf("Initialization failed!\n");
+        //return -1;
+    //} else {
+        //printf("Initialization successful!\n");
+    //}
+
+    TaskHandle_t hsymbolDetectionTask, hdisplayTask, hmsgToWorkstationTask, hmsgFromWorkstationTask = NULL;
 
     BaseType_t  result = xTaskCreate(symbolDetectionTask,
         "Symbol Detection",
@@ -178,19 +198,12 @@ int main(){
         2,
         &hsymbolDetectionTask);
 
-        result = xTaskCreate(displayingTask,
+        result = xTaskCreate(displayTask,
                     "Displaying", 
                     DEFAULT_STACK_SIZE,
                     NULL,
                     2,
-                    &hdisplayingTask);
-
-        result = xTaskCreate(msgToWorkstationTask,  //could be optional and included in the decoding function
-                    "Sending to workstation", 
-                    DEFAULT_STACK_SIZE,
-                    NULL,
-                    2,
-                    &hmsgToWorkstationTask);
+                    &hdisplayTask);
 
         result = xTaskCreate(msgFromWorkstationTask,
                     "Receiving from workstation", 

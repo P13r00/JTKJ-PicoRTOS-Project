@@ -1,5 +1,7 @@
 #include "morse_lib.h"
 
+//-piero: used AI for the string handling, it implemented malloc but needs to be
+
 const MorseMap morse_table[] = {
     {'A', ".-"},    {'B', "-..."}, {'C', "-.-."}, {'D', "-.."},
     {'E', "."},     {'F', "..-."}, {'G', "--."},  {'H', "...."},
@@ -18,7 +20,7 @@ const size_t MORSE_TABLE_SIZE = sizeof(morse_table)/sizeof(MorseMap);
 
 char* morse_to_string(const char *morse) {
     //save size for result
-    char *result = malloc(strlen(morse) * 4 + 1);
+    char *result = malloc(strlen(morse) * 4 + 1); //use buffer of defined size
     if (!result) return NULL;
     result[0] = '\0';
 
