@@ -6,6 +6,7 @@
 #include <task.h>
 #include "tkjhat/sdk.h"
 #include "buzdata.h"
+#include "morse_lib.h"
 
 #define DEFAULT_STACK_SIZE 2048
 #define THRESHOLD          100 //for sensor data filtering
@@ -79,10 +80,15 @@ static void append_to_string(char *message, char symbol) {
 }
 
 static void symbolDetectionTask(void *pvParameters) { //-piero: ples keep indentation tidy
+    int space_count = 0;
     while(1){
         if(programState == SYMBOL_DETECTION){
             memset(current_message, 0, INPUT_BUFFER_SIZE); //clear the message buffer
+            space_count = 0;
             for (;;) {
+                if (programState != SYMBOL_DETECTION){
+                    break;
+                }
                 if (ICM42670_read_sensor_data(&ax, &ay, &az, &gx, &gy, &gz, &t) != 0) {
                     printf("Sensor read failed:");
                     sleep_ms(200);
@@ -98,9 +104,11 @@ static void symbolDetectionTask(void *pvParameters) { //-piero: ples keep indent
                     if(gx >= THRESHOLD) {
                         append_to_string(current_message, '.'); //down
                         printf(".\n");
+                        space_count = 0;
                     } else if (gx <= -THRESHOLD) {
                         append_to_string(current_message, '-'); //up
                         printf("-\n");
+                        space_count = 0;
                     }
                     last_printed_gx = gx;
                     first_gx = 0;
@@ -115,6 +123,15 @@ static void symbolDetectionTask(void *pvParameters) { //-piero: ples keep indent
                     if (gy >= 150 || gy <= -150) {
                         append_to_string(current_message, ' '); //space on gy event
                         printf("Space\n");
+                        space_count++;
+                    }
+                    if (space_count >= 3) {
+                        space_count = 0;
+                        printf("Detected 3 consecutive spaces: Ending message.\n");
+                        programState = DISPLAYING;
+                        printf("Current State: DISPLAYING\n");
+                        sleep_ms(200);
+                        break;
                     }
                     last_printed_gy = gy;
                     first_gy = 0;
@@ -130,6 +147,9 @@ static void displayTask(void *pvParameters) { //unified displaytask with msg to 
     while(1){
         //printf("1\n");
         if(programState == DISPLAYING){
+            if (programState != DISPLAYING){
+                    break;
+                }
 
             super_init();
             init_display();
@@ -140,13 +160,23 @@ static void displayTask(void *pvParameters) { //unified displaytask with msg to 
                 printf("Current State: WAITING\n");
             }
 
-            printf("Message: %s\n", current_message);
+            char *translated_message = morse_to_string(current_message); // Pointer to the dynamically allocated result
+
+            printf("Message: %s\n", translated_message);
 
             vTaskDelay(pdMS_TO_TICKS(100));
-            write_text_xy(0, 0, current_message);
-            sleep_ms(100); //Display for 2 seconds
+            write_text_xy(0, 0, translated_message);
+            sleep_ms(100); //add so that it doesnt break on button press before
+            clear_display();
+
+            free(translated_message); // Free the dynamically allocated memory
 
             memset(current_message, 0, INPUT_BUFFER_SIZE); //clear the message buffer
+
+            super_init(); //reset i2c and display
+            init_ICM42670();
+            ICM42670_start_with_default_values();
+            sleep_ms(100);
 
             programState = WAITING;
             printf("Current State: WAITING\n");
@@ -161,6 +191,9 @@ static void msgFromWorkstationTask(void *pvParameters) { //-piero: implemented f
 
     while (1){
         if(programState == MSG_FROM_WORKSTATION){
+            if (programState != MSG_FROM_WORKSTATION){
+                    break;
+                }
             // take one char per time and store it in line array, until reeceived the \n
             // The application should instead play a sound, or blink a LED. 
             int c = getchar_timeout_us(0);

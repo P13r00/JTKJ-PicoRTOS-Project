@@ -77,30 +77,6 @@ ${CMAKE_CURRENT_LIST_DIR}/config
 add_subdirectory(libs/TKJHAT)
 # Support for usb serial communication
 add_subdirectory(libs/usb-serial-debug)
-# If created new libraries, include them here. 
-# You can EDIT it if you add new libraries
-# ===============================================================================================
-
-# DO NOT EDIT: Prepare build to compile the different examples ==================================
-# Add examples if necessary here
-# Uncomment the examples that you want to include in your project.
-#
-# add_subdirectory(examples/hello_blink)
-# add_subdirectory(examples/hello_blink_freertos)
-# add_subdirectory(examples/hello_pico)
-# add_subdirectory(examples/hello_freertos)
-# add_subdirectory(examples/hello_dual_cdc)
-# add_subdirectory(examples/hello_microphone)
-# add_subdirectory(examples/compilation_errors)
-add_subdirectory(examples/hello_hat)
-# add_subdirectory(examples/hat_example)
-add_subdirectory(examples/hat_imu_ex)
-add_subdirectory(examples/hat_imu_cdc_ex)
-add_subdirectory(examples/hello_serial_client)
-add_subdirectory(examples/hello_serial_bidirectional_client)
-#
-# You can edit it if you want to add new examples
-# ==============================================================================================
 
 
 # EDIT: Prepare build to compile the main target (in root src folder) ==========================
@@ -113,6 +89,8 @@ add_executable(${MAIN_TARGET}
     src/main.c
     src/buzdata.c
     src/buzdata.h
+    src/morse_lib.c
+    src/morse_lib.h
 )
 
 # Links. Add all libraries that application is using. It must at least use the pico_stdlib
