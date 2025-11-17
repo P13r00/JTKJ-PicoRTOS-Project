@@ -104,17 +104,17 @@ static void displayTask(void *pvParameters) { //unified displaytask with msg to 
     while(1){
         //printf("1\n");
         if(programState == DISPLAYING){
-            printf("d1\n");
+
             super_init();
-            printf("d2\n");
             init_display();
-            printf("d3\n");
+
             printf("Message: %s\n", current_message);
 
-            memset(current_message, 0, INPUT_BUFFER_SIZE); //clear the message buffer
             vTaskDelay(pdMS_TO_TICKS(100));
             write_text_xy(0, 0, current_message);
             sleep_ms(2000); //Display for 2 seconds
+            memset(current_message, 0, INPUT_BUFFER_SIZE); //clear the message buffer
+
             programState = WAITING;
             printf("Current State: WAITING\n");
         }
