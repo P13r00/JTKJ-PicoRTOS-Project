@@ -5,6 +5,7 @@
 #include <queue.h>
 #include <task.h>
 #include "tkjhat/sdk.h"
+#include "buzdata.h"
 
 #define DEFAULT_STACK_SIZE 2048
 #define THRESHOLD          100 //for sensor data filtering
@@ -27,6 +28,11 @@ static float last_printed_gx = 0.0f;
 static int first_gx = 0;
 static float last_printed_gy = 0.0f;
 static int first_gy = 0;
+
+static int melody[][2] = {
+    {NOTE_C6, 200}, {NOTE_E6, 200}, {NOTE_G6, 200}, {NOTE_C7, 400},
+    {REST, 0}
+};
 
 static void button_function(uint gpio, uint32_t eventMask); //-piero: REMEMBBER TO ADD ALL PROTOTYPES
 static void append_to_string(char *message, char symbol);
@@ -138,7 +144,7 @@ static void displayTask(void *pvParameters) { //unified displaytask with msg to 
 
             vTaskDelay(pdMS_TO_TICKS(100));
             write_text_xy(0, 0, current_message);
-            sleep_ms(2000); //Display for 2 seconds
+            sleep_ms(100); //Display for 2 seconds
 
             memset(current_message, 0, INPUT_BUFFER_SIZE); //clear the message buffer
 
@@ -186,6 +192,7 @@ static void msgFromWorkstationTask(void *pvParameters) { //-piero: implemented f
     }
 }
 
+
 static void super_init() {
     i2c_deinit(i2c_default);
     gpio_set_function(DEFAULT_I2C_SDA_PIN, GPIO_FUNC_SIO);
@@ -199,7 +206,15 @@ static void super_init() {
 int main(){
     stdio_init_all();
     init_hat_sdk();
-    sleep_ms(5000);
+    printf("TKJHAT Morse Code Interpreter Starting...\n");
+    sleep_ms(3000);
+    printf("Welcome to TKJHAT Morse Code Interpreter!\n");
+
+    init_buzzer();
+    
+    printf("now singing\n");
+    sing(melody);
+
     init_sw1();
     init_sw2();
     gpio_set_irq_enabled_with_callback(BUTTON1, GPIO_IRQ_EDGE_RISE, true, button_function);
@@ -215,7 +230,6 @@ int main(){
     //} else {
         //printf("Initialization successful!\n");
     //}
-
     TaskHandle_t hsymbolDetectionTask, hdisplayTask, hmsgToWorkstationTask, hmsgFromWorkstationTask = NULL;
 
     BaseType_t  result = xTaskCreate(symbolDetectionTask,
