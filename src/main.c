@@ -25,6 +25,8 @@ char current_message[INPUT_BUFFER_SIZE] = {0}; //current message -piero: decreas
 float ax = 0.0, ay = 0.0, az = 0.0, gx = 0.0, gy = 0.0, gz = 0.0, t = 0.0;
 static float last_printed_gx = 0.0f;
 static int first_gx = 0;
+static float last_printed_gy = 0.0f;
+static int first_gy = 0;
 
 static void button_function(uint gpio, uint32_t eventMask); //-piero: REMEMBBER TO ADD ALL PROTOTYPES
 static void append_to_string(char *message, char symbol);
@@ -80,20 +82,38 @@ static void symbolDetectionTask(void *pvParameters) { //-piero: ples keep indent
                     sleep_ms(200);
                     continue;
                 }
+
                 if (!(gx >= THRESHOLD || gx <= -THRESHOLD)) {
                     gx = 0;
                 }
-                float diff = gx - last_printed_gx;
-                if (diff < 0.0f) diff = -diff;
-                if (first_gx || diff >= 20.0f) {
+                float diff_gx = gx - last_printed_gx;
+                if (diff_gx < 0.0f) diff_gx = -diff_gx;
+                if (first_gx || diff_gx >= 20.0f) {
                     if(gx >= THRESHOLD) {
                         append_to_string(current_message, '.'); //down
+                        printf(".\n");
                     } else if (gx <= -THRESHOLD) {
                         append_to_string(current_message, '-'); //up
+                        printf("-\n");
                     }
                     last_printed_gx = gx;
                     first_gx = 0;
                 }
+
+                if (!(gy >= 150 || gy <= -150)) { //review values???
+                    gy = 0;
+                }
+                float diff_gy = gy - last_printed_gy;
+                if (diff_gy < 0.0f) diff_gy = -diff_gy;
+                if (first_gy || diff_gy >= 50.0f) {
+                    if (gy >= 150 || gy <= -150) {
+                        append_to_string(current_message, ' '); //space on gy event
+                        printf("Space\n");
+                    }
+                    last_printed_gy = gy;
+                    first_gy = 0;
+                }
+
                 sleep_ms(100);
             }
         }
@@ -107,12 +127,19 @@ static void displayTask(void *pvParameters) { //unified displaytask with msg to 
 
             super_init();
             init_display();
+            
+            if (current_message[0] == '\0') {
+                printf("No message detected\n");
+                programState = WAITING;
+                printf("Current State: WAITING\n");
+            }
 
             printf("Message: %s\n", current_message);
 
             vTaskDelay(pdMS_TO_TICKS(100));
             write_text_xy(0, 0, current_message);
             sleep_ms(2000); //Display for 2 seconds
+
             memset(current_message, 0, INPUT_BUFFER_SIZE); //clear the message buffer
 
             programState = WAITING;
