@@ -97,5 +97,6 @@
 #define REST      0
 
 void sing(int melody[][2]);
+void sing(int ring[][2]);
 
 #endif
