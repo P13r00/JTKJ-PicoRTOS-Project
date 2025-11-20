@@ -72,7 +72,7 @@ static void button_function(uint gpio, uint32_t eventMask) { //-piero: removed c
             printf("Current State: MSG_FROM_WORKSTATION\n");
         } else {
             programState = DISPLAYING;
-            printf("Current State: DISPLAYING\n");
+            //printf("Current State: DISPLAYING\n");
         }
     }
 }
@@ -163,7 +163,7 @@ static void displayTask(void *pvParameters) { //unified displaytask with msg to 
                 printf("No message detected\n");
                 programState = WAITING;
                 printf("Current State: WAITING\n");
-            }
+            } else {
 
             char *translated_message = morse_to_string(current_message); // Pointer to the dynamically allocated result
 
@@ -173,7 +173,7 @@ static void displayTask(void *pvParameters) { //unified displaytask with msg to 
 
             vTaskDelay(pdMS_TO_TICKS(100));
             write_text_xy(0, 0, translated_message);
-            sleep_ms(100); //add so that it doesnt break on button press before
+            sleep_ms(500); //add so that it doesnt break on button press before
             clear_display();
 
             free(translated_message); // Free the dynamically allocated memory
@@ -187,6 +187,7 @@ static void displayTask(void *pvParameters) { //unified displaytask with msg to 
 
             programState = WAITING;
             printf("Current State: WAITING\n");
+            }
         }
     }
 }
