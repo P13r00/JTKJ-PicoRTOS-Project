@@ -35,6 +35,11 @@ static int melody[][2] = {
     {REST, 0}
 };
 
+static int ring[][2] = {
+    {NOTE_E6, 100}, {NOTE_D6, 100}, {NOTE_FS5, 200}, {NOTE_GS5, 200}, {REST, 50}, {NOTE_CS6, 100}, {NOTE_B6, 100}, {NOTE_D5, 200}, {NOTE_E5, 200}, {REST, 50}, {NOTE_B6, 100}, {NOTE_A6, 100}, {NOTE_CS5, 200}, {NOTE_E5, 200}, {NOTE_A5, 200},
+    {REST, 0}
+};
+
 static void button_function(uint gpio, uint32_t eventMask); //-piero: REMEMBBER TO ADD ALL PROTOTYPES
 static void append_to_string(char *message, char symbol);
 static void space_key(uint gpio, uint32_t eventMask);
@@ -163,6 +168,8 @@ static void displayTask(void *pvParameters) { //unified displaytask with msg to 
             char *translated_message = morse_to_string(current_message); // Pointer to the dynamically allocated result
 
             printf("Message: %s\n", translated_message);
+            if(current_message[0] != '\0') 
+                sing(ring);
 
             vTaskDelay(pdMS_TO_TICKS(100));
             write_text_xy(0, 0, translated_message);
