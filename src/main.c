@@ -58,6 +58,8 @@ static void rgbledTask(void *pvParameters);
     i2c_deinit(i2c_default);
 }*/
 
+
+
 // Simple HSV to RGB conversion. h in [0,360), s,v in [0,1]
 static void hsv_to_rgb(float h, float s, float v, uint8_t *out_r, uint8_t *out_g, uint8_t *out_b) {
     float c = v * s;
@@ -105,21 +107,28 @@ static void rgbledTask(void *pvParameters){
     }
 }
 
-static void button_function(uint gpio, uint32_t eventMask) { //-piero: removed change state function, everything is working directly
+
+static void button_function(uint gpio, uint32_t eventMask) { 
+    //-piero: removed change state function, everything is working directly
+    // bach: added "whatifs" for rgb change, if rgbledtask takes too much time to fix, uncomment rgb_led_write's here to implement leds.
     if (gpio == BUTTON1) {
         if(programState == WAITING){
             programState = SYMBOL_DETECTION;
+            // rgb_led_write(0, 0, 255); //blue for symbol detection
             printf("Current State: SYMBOL_DETECTION\n");
         } else {
             programState = DISPLAYING;
+            // rgb_led_write(0, 255, 0); //green for displaying state
             printf("Current State: DISPLAYING\n");
         }
     } else if (gpio == BUTTON2) {
         if(programState == WAITING){
             programState = MSG_FROM_WORKSTATION;
+            // rgb_led_write(255, 255, 0); //yellow for msg from workstation
             printf("Current State: MSG_FROM_WORKSTATION\n");
         } else {
             programState = DISPLAYING;
+            // rgb_led_write(0, 255, 0); //green for displaying state
             //printf("Current State: DISPLAYING\n");
         }
     }
@@ -188,8 +197,7 @@ static void symbolDetectionTask(void *pvParameters) { //-piero: ples keep indent
                     }
                     last_printed_gy = gy;
                     first_gy = 0;
-                }
-
+                } 
                 sleep_ms(100);
             }
         }
@@ -218,6 +226,7 @@ static void displayTask(void *pvParameters) { //unified displaytask with msg to 
             printf("Message: %s\n", translated_message);
             if(current_message[0] != '\0') 
                 sing(ring);
+
 
             vTaskDelay(pdMS_TO_TICKS(100));
             write_text_xy(0, 0, translated_message);
@@ -299,8 +308,9 @@ int main(){
     sleep_ms(3000);
     printf("Welcome to TKJHAT Morse Code Interpreter!\n");
 
+    init_rgb_led();
     init_buzzer();
-    
+   
     printf("now singing\n");
     sing(melody);
 
