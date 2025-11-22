@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <string.h>
+#include <math.h>
 #include <pico/stdlib.h>
 #include <FreeRTOS.h>
 #include <queue.h>
@@ -49,6 +50,7 @@ static void msgToWorkstationTask(void *pvParameters);
 static void super_init();
 static void state_change();
 static void reset_screen();
+static void rgbledTask(void *pvParameters);
 
 /*static void reset_screen(){
     memset(current_message, 0, INPUT_BUFFER_SIZE); //clear the message buffer
@@ -56,6 +58,52 @@ static void reset_screen();
     i2c_deinit(i2c_default);
 }*/
 
+// Simple HSV to RGB conversion. h in [0,360), s,v in [0,1]
+static void hsv_to_rgb(float h, float s, float v, uint8_t *out_r, uint8_t *out_g, uint8_t *out_b) {
+    float c = v * s;
+    float hh = h / 60.0f;
+    float x = c * (1.0f - fabsf(fmodf(hh, 2.0f) - 1.0f));
+    float r1 = 0, g1 = 0, b1 = 0;
+    if (0.0f <= hh && hh < 1.0f) { r1 = c; g1 = x; b1 = 0; }
+    else if (1.0f <= hh && hh < 2.0f) { r1 = x; g1 = c; b1 = 0; }
+    else if (2.0f <= hh && hh < 3.0f) { r1 = 0; g1 = c; b1 = x; }
+    else if (3.0f <= hh && hh < 4.0f) { r1 = 0; g1 = x; b1 = c; }
+    else if (4.0f <= hh && hh < 5.0f) { r1 = x; g1 = 0; b1 = c; }
+    else if (5.0f <= hh && hh < 6.0f) { r1 = c; g1 = 0; b1 = x; }
+    float m = v - c;
+    uint8_t r = (uint8_t)roundf((r1 + m) * 255.0f);
+    uint8_t g = (uint8_t)roundf((g1 + m) * 255.0f);
+    uint8_t b = (uint8_t)roundf((b1 + m) * 255.0f);
+    *out_r = r; *out_g = g; *out_b = b;
+}
+
+static void rgbledTask(void *pvParameters){
+    //Implement RGB LED feedback for different states, rainbow for waiting state,
+    // solid colors for others
+    // Bach: should be run according to the states
+    static float hue = 0.0f; // 0..360
+    //loop
+    for(;;){
+        if (programState == WAITING) {
+            // Cycle rainbow colors by advancing hue
+            uint8_t r, g, b;
+            hsv_to_rgb(hue, 1.0f, 0.5f, &r, &g, &b); // medium brightness
+            rgb_led_write(r, g, b);
+            hue += 1.0f; // increment hue each call
+            if (hue >= 360.0f) hue -= 360.0f;
+        } else if (programState == SYMBOL_DETECTION) {
+            // Set LED to blue
+            rgb_led_write(0, 0, 255);
+        } else if (programState == MSG_FROM_WORKSTATION) {
+            // Set LED to yellow
+            rgb_led_write(255, 255, 0);
+        } else if (programState == DISPLAYING) {
+            // Set LED to green
+            rgb_led_write(0, 255, 0);
+        }
+        vTaskDelay(pdMS_TO_TICKS(100));
+    }
+}
 
 static void button_function(uint gpio, uint32_t eventMask) { //-piero: removed change state function, everything is working directly
     if (gpio == BUTTON1) {
@@ -203,7 +251,7 @@ static void msgFromWorkstationTask(void *pvParameters) { //-piero: implemented f
                     break;
                 }
             // take one char per time and store it in line array, until reeceived the \n
-            // The application should instead play a sound, or blink a LED. 
+            // The application should instead play a sound.
             int c = getchar_timeout_us(0);
             if (c != PICO_ERROR_TIMEOUT){// I have received a character
                 if (c == '\r') continue; // ignore CR, wait for LF if (ch == '\n') { line[len] = '\0';
@@ -271,7 +319,14 @@ int main(){
     //} else {
         //printf("Initialization successful!\n");
     //}
-    TaskHandle_t hsymbolDetectionTask, hdisplayTask, hmsgToWorkstationTask, hmsgFromWorkstationTask = NULL;
+    TaskHandle_t hrgbledTask, hsymbolDetectionTask, hdisplayTask, hmsgToWorkstationTask, hmsgFromWorkstationTask = NULL;
+    
+    BaseType_t result = xTaskCreate(rgbledTask,
+                    "RGB LED task",
+                    DEFAULT_STACK_SIZE,
+                    NULL,
+                    2,
+                    &hrgbledTask);
 
     BaseType_t  result = xTaskCreate(symbolDetectionTask,
         "Symbol Detection",
@@ -293,6 +348,8 @@ int main(){
                     NULL,
                     2,
                     &hmsgFromWorkstationTask);
+
+        
 
     
     vTaskStartScheduler();
