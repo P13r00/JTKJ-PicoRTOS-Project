@@ -221,17 +221,27 @@ static void displayTask(void *pvParameters) { //unified displaytask with msg to 
                 printf("Current State: WAITING\n");
             } else {
 
-            char *translated_message = morse_to_string(current_message); // Pointer to the dynamically allocated result
+            char *translated_message = NULL;
 
-            printf("Message: %s\n", translated_message);
-            if(current_message[0] != '\0') 
-                sing(ring);
+            if (current_message[0] == '.' || current_message[0] == '-'){
+                translated_message = morse_to_string(current_message); // Pointer to the dynamically allocated result
+            } else {
+               translated_message = string_to_morse(current_message);
+            }
+            
+            if (translated_message != NULL) {
+                    printf("Message: %s\n", translated_message);
+                    
+                    sing(ring);
 
+                    vTaskDelay(pdMS_TO_TICKS(100));
+                    write_text_xy(0, 0, translated_message);
+                    sleep_ms(500); 
+                    clear_display();
 
-            vTaskDelay(pdMS_TO_TICKS(100));
-            write_text_xy(0, 0, translated_message);
-            sleep_ms(500); //add so that it doesnt break on button press before
-            clear_display();
+              } else {
+                  printf("Error: Translation failed (Memory allocation error)\n");
+              }
 
             free(translated_message); // Free the dynamically allocated memory
 
