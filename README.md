@@ -1,15 +1,15 @@
-# H1 Raspberry Pi Pico project for the course Computer Systems 521286A-3006
+# Raspberry Pi Pico project for the course Computer Systems 521286A-3006
 
-# H2 Group Members:
-# H2 Hoang Bach
-# H2 Pedro Setti
-# H2 Piero Cianciotta
+## Group Members:
+## Hoang Bach
+## Pedro Setti
+## Piero Cianciotta
 
 
 '![State Machine][JTKJ-PicoRTOS-Project/state_machine_diagram.jpg]'
 
 
-# H2 main.c Function Documentation
+## H2 main.c Function Documentation
 
 
 **static void append_to_string(char \*message, char symbol)**
@@ -85,7 +85,7 @@ MSG_FROM_WORKSTATION	Yellow
 DISPLAYING	Green
 
 
-# H2 morse_lib.c and buzdata.c Function Documentation
+## morse_lib.c and buzdata.c Function Documentation
 
 **void sing(int notes[][2]);**
 Plays a sequence of musical tones using the buzzer.
