@@ -330,13 +330,6 @@ int main(){
         //printf("Initialization successful!\n");
     //}
     TaskHandle_t hrgbledTask, hsymbolDetectionTask, hdisplayTask, hmsgToWorkstationTask, hmsgFromWorkstationTask = NULL;
-    
-    BaseType_t result = xTaskCreate(rgbledTask,
-                    "RGB LED task",
-                    DEFAULT_STACK_SIZE,
-                    NULL,
-                    2,
-                    &hrgbledTask);
 
     BaseType_t  result = xTaskCreate(symbolDetectionTask,
         "Symbol Detection",
@@ -359,8 +352,12 @@ int main(){
                     2,
                     &hmsgFromWorkstationTask);
 
-        
-
+        result = xTaskCreate(rgbledTask,
+                    "RGB LED task",
+                    DEFAULT_STACK_SIZE,
+                    NULL,
+                    2,
+                    &hrgbledTask);
     
     vTaskStartScheduler();
     
