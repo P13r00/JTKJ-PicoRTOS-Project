@@ -6,7 +6,7 @@
 ## Piero Cianciotta
 
 
-'![State Machine][JTKJ-PicoRTOS-Project/state_machine_diagram.jpg]'
+'![State Machine][(https://github.com/P13r00/JTKJ-PicoRTOS-Project/blob/main/state_machine_diagram.jpg)]'
 
 
 ## H2 main.c Function Documentation
