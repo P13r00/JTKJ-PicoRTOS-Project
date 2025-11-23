@@ -1,15 +1,15 @@
 # Raspberry Pi Pico project for the course Computer Systems 521286A-3006
 
 ## Group Members:
-## Hoang Bach
-## Pedro Setti
-## Piero Cianciotta
+** Hoang Bach **
+** Pedro Setti **
+** Piero Cianciotta **
 
 
 ![State Machine](https://github.com/P13r00/JTKJ-PicoRTOS-Project/blob/main/state_machine_diagram.jpg)
 
 
-## H2 main.c Function Documentation
+## main.c Function Documentation
 
 
 **static void append_to_string(char \*message, char symbol)**
