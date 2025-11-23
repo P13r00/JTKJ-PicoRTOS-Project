@@ -1,18 +1,18 @@
-Raspberry Pi Pico project for the course Computer Systems 521286A-3006
+# H1 Raspberry Pi Pico project for the course Computer Systems 521286A-3006
 
-Group Members:
-Hoang Bach
-Pedro Setti
-Piero Cianciotta
-
-
-![State Machine][state_machine_diagram.jpg]
+# H2 Group Members:
+# H2 Hoang Bach
+# H2 Pedro Setti
+# H2 Piero Cianciotta
 
 
-main.c Function Documentation
+'![State Machine][JTKJ-PicoRTOS-Project/state_machine_diagram.jpg]'
 
 
-static void append_to_string(char *message, char symbol)
+# H2 main.c Function Documentation
+
+
+**static void append_to_string(char \*message, char symbol)**
 Appends a single character (symbol) to the end of a C-string stored in message.
 
 Parameters:
@@ -20,7 +20,7 @@ message – pointer to a null-terminated char buffer
 symbol – the character to append
 
 
-static void hsv_to_rgb(float h, float s, float v, uint8_t *out_r, uint8_t *out_g, uint8_t *out_b)
+**static void hsv_to_rgb(float h, float s, float v, uint8_t \*out_r, uint8_t \*out_g, uint8_t \*out_b)**
 Converts a color in HSV space to RGB (0–255 range). Used for cycling LED rainbow colors.
 
 Parameters:
@@ -30,7 +30,7 @@ v brightness [0,1]
 out_r, out_g, out_b – output pointers to store the RGB values
 
 
-static void button_function(uint gpio, uint32_t eventMask)
+**static void button_function(uint gpio, uint32_t eventMask)**
 GPIO interrupt callback for BUTTON1 and BUTTON2.
 Changes the global programState depending on current state and which button was pressed.
 Parameters:
@@ -38,7 +38,7 @@ gpio – which button triggered
 eventMask – edge type (rising edge)
 
 
-static void symbolDetectionTask(void *pvParameters)
+**static void symbolDetectionTask(void \*pvParameters)**
 task that reads accelerometer/gyroscope data and translates movements into Morse symbols:
 gx > threshold → dot (.)
 gx < -threshold → dash (-)
@@ -50,7 +50,7 @@ Uses simple filtering on gx and gy
 Exits loop when state changes
 
 
-static void displayTask(void *pvParameters)
+**static void displayTask(void \*pvParameters)**
 Handles both displaying messages and converting Morse ↔ text
 Initialize display + I2C (super_init() + init_display())
 If message begins with . or -: decode Morse
@@ -65,7 +65,7 @@ Clears display afterwards
 Handles workstation messages and sensor messages equally
 
 
-static void msgFromWorkstationTask(void *pvParameters)
+**static void msgFromWorkstationTask(void \*pvParameters)**
 Reads characters sent over USB (stdio), assembles them into a message until newline, and triggers displaying.
 
 Reads characters via getchar_timeout_us()
@@ -76,7 +76,7 @@ Includes buffer overflow handling
 Clears message at the start of state
 
 
-static void rgbledTask(void *pvParameters)
+**static void rgbledTask(void \*pvParameters)**
 Controls the RGB LED based on system state:
 State	LED Behavior
 WAITING	Rainbow cycle / animation
@@ -85,9 +85,9 @@ MSG_FROM_WORKSTATION	Yellow
 DISPLAYING	Green
 
 
-morse_lib.c and buzdata.c Function Documentation
+# H2 morse_lib.c and buzdata.c Function Documentation
 
-void sing(int notes[][2]);
+**void sing(int notes[][2]);**
 Plays a sequence of musical tones using the buzzer.
 Each entry in notes contains:
 notes[j][0]: frequency
@@ -95,7 +95,7 @@ notes[j][1]: duration
 The sequence ends when a note has duration 0.
 
 
-char* morse_to_string(const char *morse);
+**char\* morse_to_string(const char \*morse);**
 Converts a Morse-coded string into normal text.
 
 Allocates a dynamically sized output buffer with malloc.
@@ -106,7 +106,7 @@ If TERMINATOR_LENGTH consecutive spaces are detected, appends [END] and stops.
 Returns a heap-allocated string (must be freed by the caller).
 
 
-char* string_to_morse(const char *str);
+**char\* string_to_morse(const char \*str);**
 Converts a normal ASCII string to Morse code.
 Allocates a result buffer based on maximum Morse symbol length.
 Converts letters to uppercase before lookup.
