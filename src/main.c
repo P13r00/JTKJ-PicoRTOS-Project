@@ -13,13 +13,11 @@
 #define THRESHOLD          100 //for sensor data filtering
 #define INPUT_BUFFER_SIZE 100 //-piero: added as a global variable
 
-//states -piero: update incrementally following new functionalities
-enum state { WAITING=0,             //await input from sensor or workstation
-             SYMBOL_DETECTION=1,    //read symbols from sensor
-             MSG_FROM_WORKSTATION=2,  //??notneeded?? sending the message to the workstation
-             DISPLAYING=3,          //displaying the message, providing audio feedback
-             //DECODING=3,            //from Morse -> Characters
-             //ENCODING=4,            //from Characters -> Morse
+
+enum state { WAITING=0,               //await input from sensor or workstation
+             SYMBOL_DETECTION=1,      //read symbols from sensor
+             MSG_FROM_WORKSTATION=2,  //read message from workstation
+             DISPLAYING=3             //displaying the message, providing audio feedback
             };
 enum state programState = WAITING;
 
@@ -41,23 +39,14 @@ static int ring[][2] = {
     {REST, 0}
 };
 
-static void button_function(uint gpio, uint32_t eventMask); //-piero: REMEMBBER TO ADD ALL PROTOTYPES
+static void button_function(uint gpio, uint32_t eventMask);
 static void append_to_string(char *message, char symbol);
-static void space_key(uint gpio, uint32_t eventMask);
 static void symbolDetectionTask(void *pvParameters);
 static void displayingTask(void *pvParameters);
 static void msgToWorkstationTask(void *pvParameters);
 static void super_init();
-static void state_change();
 static void reset_screen();
 static void rgbledTask(void *pvParameters);
-
-/*static void reset_screen(){
-    memset(current_message, 0, INPUT_BUFFER_SIZE); //clear the message buffer
-    //reset other variables
-    i2c_deinit(i2c_default);
-}*/
-
 
 
 // Simple HSV to RGB conversion. h in [0,360), s,v in [0,1]
@@ -79,12 +68,12 @@ static void hsv_to_rgb(float h, float s, float v, uint8_t *out_r, uint8_t *out_g
     *out_r = r; *out_g = g; *out_b = b;
 }
 
+
 static void rgbledTask(void *pvParameters){
     //Implement RGB LED feedback for different states, rainbow for waiting state,
-    // solid colors for others
     // Bach: should be run according to the states
     static float hue = 0.0f; // 0..360
-    //loop
+
     for(;;){
         if (programState == WAITING) {
             // Cycle rainbow colors by advancing hue
@@ -114,25 +103,22 @@ static void button_function(uint gpio, uint32_t eventMask) {
     if (gpio == BUTTON1) {
         if(programState == WAITING){
             programState = SYMBOL_DETECTION;
-            // rgb_led_write(0, 0, 255); //blue for symbol detection
             printf("Current State: SYMBOL_DETECTION\n");
         } else {
             programState = DISPLAYING;
-            // rgb_led_write(0, 255, 0); //green for displaying state
             printf("Current State: DISPLAYING\n");
         }
     } else if (gpio == BUTTON2) {
         if(programState == WAITING){
             programState = MSG_FROM_WORKSTATION;
-            // rgb_led_write(255, 255, 0); //yellow for msg from workstation
             printf("Current State: MSG_FROM_WORKSTATION\n");
         } else {
             programState = DISPLAYING;
-            // rgb_led_write(0, 255, 0); //green for displaying state
-            //printf("Current State: DISPLAYING\n");
+            printf("Current State: DISPLAYING\n");
         }
     }
 }
+
 
 static void append_to_string(char *message, char symbol) {
     // append symbol to current_message string
@@ -141,7 +127,8 @@ static void append_to_string(char *message, char symbol) {
     *message = '\0';
 }
 
-static void symbolDetectionTask(void *pvParameters) { //-piero: ples keep indentation tidy
+
+static void symbolDetectionTask(void *pvParameters) {
     int space_count = 0;
     while(1){
         if(programState == SYMBOL_DETECTION){
@@ -176,7 +163,7 @@ static void symbolDetectionTask(void *pvParameters) { //-piero: ples keep indent
                     first_gx = 0;
                 }
 
-                if (!(gy >= 150 || gy <= -150)) { //review values???
+                if (!(gy >= 150 || gy <= -150)) {
                     gy = 0;
                 }
                 float diff_gy = gy - last_printed_gy;
@@ -204,9 +191,10 @@ static void symbolDetectionTask(void *pvParameters) { //-piero: ples keep indent
     }
 }
 
-static void displayTask(void *pvParameters) { //unified displaytask with msg to workstation
+
+static void displayTask(void *pvParameters) {
+
     while(1){
-        //printf("1\n");
         if(programState == DISPLAYING){
             if (programState != DISPLAYING){
                     break;
@@ -276,8 +264,7 @@ static void msgFromWorkstationTask(void *pvParameters) { //-piero: implemented f
                 if (c == '\r') continue; // ignore CR, wait for LF if (ch == '\n') { line[len] = '\0';
                 if (c == '\n'){
                     // terminate and process the collected line
-                    current_message[index] = '\0'; 
-                    //printf("__[RX]:\"%s\"__\n", current_message); //Print as debug in the output
+                    current_message[index] = '\0';
                     index = 0;
                     programState = DISPLAYING;
                     printf("Current State: DISPLAYING\n");
@@ -288,7 +275,6 @@ static void msgFromWorkstationTask(void *pvParameters) { //-piero: implemented f
                 }
                 else { //Overflow: print and restart the buffer with the new character. 
                     current_message[INPUT_BUFFER_SIZE - 1] = '\0';
-                    //printf("__[RX]:\"%s\"__\n", current_message);
                     index = 0; 
                     current_message[index++] = (char)c;
                 }
@@ -333,12 +319,6 @@ int main(){
     ICM42670_start_with_default_values();
     sleep_ms(100);
 
-    //if (super_init() != 0) {
-        //printf("Initialization failed!\n");
-        //return -1;
-    //} else {
-        //printf("Initialization successful!\n");
-    //}
     TaskHandle_t hrgbledTask, hsymbolDetectionTask, hdisplayTask, hmsgToWorkstationTask, hmsgFromWorkstationTask = NULL;
 
     BaseType_t  result = xTaskCreate(symbolDetectionTask,
